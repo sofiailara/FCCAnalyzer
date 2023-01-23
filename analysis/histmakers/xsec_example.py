@@ -1,3 +1,10 @@
+import uproot
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib as mlp
+from scipy.stats import norm
+from scipy.optimize import curve_fit
+from scipy import stats
 
 import analysis, functions
 import ROOT
@@ -21,6 +28,12 @@ bins_phi = (500, -5, 5)
 bins_count = (50, 0, 50)
 bins_pdgid = (60, -30, 30)
 bins_charge = (10, -5, 5)
+bins_energy = (60, 0, 100)
+bins_emiss= (1000, 0, 100)
+bins_weight= (1000, 0, 100)
+bins_weight2= (1000, 0, 100)
+
+#make use of the variable “weight”, defined as 1.0 
 
 bins_cos = (100, -1, 1)
 
@@ -61,6 +74,11 @@ def build_graph_ll(df, dataset):
     df = df.Define("leps_all_phi", "FCCAnalyses::ReconstructedParticle::get_phi(leps_all)")
     df = df.Define("leps_all_q", "FCCAnalyses::ReconstructedParticle::get_charge(leps_all)")
     df = df.Define("leps_all_no", "FCCAnalyses::ReconstructedParticle::get_n(leps_all)")
+    df = df.Define("missingEnergy", "FCCAnalyses::missingEnergy(91., ReconstructedParticles)")
+    df = df.Define("emiss", "missingEnergy[0].energy")
+    
+    
+    results.append(df.Histo1D(("weight", "", *bins_weight), "weight"))
     
     # construct Lorentz vectors of the leptons
     df = df.Define("leps_tlv", "FCCAnalyses::makeLorentzVectors(leps_all)")
@@ -76,11 +94,23 @@ def build_graph_ll(df, dataset):
     df = df.Define("visibleEnergy", "FCCAnalyses::visibleEnergy(ReconstructedParticles)")
     
     
+    df = df.Define("m_inv", "FCCAnalyses::inv_mass(leps_tlv)")
+    df = df.Filter("leps_all_no>=2")
+    #df = df.Filter("m_inv>=51.652499999999996")
+    #df = df.Filter("emiss<=22.25")
+    
+    
     results.append(df.Histo1D(("leps_all_p", "", *bins_p_mu), "leps_all_p"))
     results.append(df.Histo1D(("leps_all_theta", "", *bins_theta), "leps_all_theta"))
     results.append(df.Histo1D(("leps_all_phi", "", *bins_phi), "leps_all_phi"))
     results.append(df.Histo1D(("leps_all_q", "", *bins_charge), "leps_all_q"))
     results.append(df.Histo1D(("leps_all_no", "", *bins_count), "leps_all_no"))
+    results.append(df.Histo1D(("m_inv", "", *bins_m_ll), "m_inv"))
+    #results.append(df.Histo1D(("missingEnergy", "", *bins_energy), "missingEnergy"))
+    results.append(df.Histo1D(("emiss", "", *bins_emiss), "emiss"))
+    results.append(df.Histo1D(("weight", "", *bins_weight2), "weight"))
+    #total and selected
+
     
     results.append(df.Histo1D(("m_inv", "", *bins_m_ll), "m_inv"))
     results.append(df.Histo1D(("missingEnergy", "", *bins_m_ll), "missingEnergy"))
@@ -99,14 +129,13 @@ def build_graph_ll(df, dataset):
     
     
     results.append(df.Histo1D(("cosThetac", "", *bins_cos), "cosThetac"))
-    
-    
+        
     results.append(df.Histo1D(("evts_final", "", *bins_count), "weight"))
     return results, weightsum
     
- 
-    
-   
+
+
+
 
 if __name__ == "__main__":
 
@@ -116,6 +145,7 @@ if __name__ == "__main__":
     datasets = [] # list of datasets to be run over
 
     datasets += functions.filter_datasets(datasets_spring2021_ecm91, ["p8_ee_Zmumu_ecm91"])
+    datasets += functions.filter_datasets(datasets_spring2021_ecm91, ["p8_ee_Ztautau_ecm91"])
     result = functions.build_and_run(datasets, build_graph_ll, "tmp/output_xsec_example.root", maxFiles=args.maxFiles)
+    #functions.build_and_run(datasets, build_graph_ll, "tmp/output_xsec_example.root", maxFiles=args.maxFiles, norm=True, lumi=150000000)
 
-    
