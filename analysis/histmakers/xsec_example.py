@@ -18,7 +18,7 @@ args = parser.parse_args()
 functions.set_threads(args)
 
 # define histograms
-bins_p_mu = (20000, 0, 200) # 10 MeV bins
+bins_p_mu = (40000, 0, 200) # 10 MeV bins
 bins_m_ll = (10000, 0, 100) # 10 MeV bins
 bins_p_ll = (20000, 0, 200) # 10 MeV bins
 
@@ -32,6 +32,9 @@ bins_energy = (60, 0, 100)
 bins_emiss= (1000, 0, 100)
 bins_weight= (1000, 0, 100)
 bins_weight2= (1000, 0, 100)
+bins_p= (1000, 0, 5)
+bins_acol= (1000, -5, 5)
+
 
 #make use of the variable “weight”, defined as 1.0 
 
@@ -59,6 +62,14 @@ def build_graph_ll(df, dataset):
     df = df.Define("gen_muons_phi", "FCCAnalyses::MCParticle::get_phi(gen_muons)")
     df = df.Define("gen_muons_no", "FCCAnalyses::MCParticle::get_n(gen_muons)")
     
+    # get the leptons leptons
+    df = df.Define("leps_all", "FCCAnalyses::ReconstructedParticle::get(Lepton0, ReconstructedParticles)")
+    df = df.Define("leps_all_p", "FCCAnalyses::ReconstructedParticle::get_p(leps_all)")
+    df = df.Define("leps_all_theta", "FCCAnalyses::ReconstructedParticle::get_theta(leps_all)")
+    df = df.Define("leps_all_phi", "FCCAnalyses::ReconstructedParticle::get_phi(leps_all)")
+    df = df.Define("leps_all_q", "FCCAnalyses::ReconstructedParticle::get_charge(leps_all)")
+    df = df.Define("leps_all_no", "FCCAnalyses::ReconstructedParticle::get_n(leps_all)")
+
     results.append(df.Histo1D(("gen_muons_p", "", *bins_p_mu), "gen_muons_p"))
     results.append(df.Histo1D(("gen_muons_theta", "", *bins_theta), "gen_muons_theta"))
     results.append(df.Histo1D(("gen_muons_phi", "", *bins_phi), "gen_muons_phi"))
@@ -67,35 +78,46 @@ def build_graph_ll(df, dataset):
     results.append(df.Histo1D(("evts_initial", "", *bins_count), "weight"))
     
     
-    # get the leptons leptons
-    df = df.Define("leps_all", "FCCAnalyses::ReconstructedParticle::get(Lepton0, ReconstructedParticles)")
-    df = df.Define("leps_all_p", "FCCAnalyses::ReconstructedParticle::get_p(leps_all)")
-    df = df.Define("leps_all_theta", "FCCAnalyses::ReconstructedParticle::get_theta(leps_all)")
-    df = df.Define("leps_all_phi", "FCCAnalyses::ReconstructedParticle::get_phi(leps_all)")
-    df = df.Define("leps_all_q", "FCCAnalyses::ReconstructedParticle::get_charge(leps_all)")
-    df = df.Define("leps_all_no", "FCCAnalyses::ReconstructedParticle::get_n(leps_all)")
-    df = df.Define("missingEnergy", "FCCAnalyses::missingEnergy(91., ReconstructedParticles)")
-    df = df.Define("emiss", "missingEnergy[0].energy")
+    #df = df.Define("missingEnergy", "FCCAnalyses::missingEnergy(91., ReconstructedParticles)")
+    #df = df.Define("emiss", "missingEnergy[0].energy")
+    df = df.Define("acolinearity", "FCCAnalyses::acolinearity(leps_all)")
+    
+    #momentum leading
+    df = df.Define("muon_leading", "(leps_all_p[0] > leps_all_p[1]) ? leps_all_p[0] : leps_all_p[1]")
+    df = df.Define("muon_subleading", "(leps_all_p[0] < leps_all_p[1]) ? leps_all_p[0] : leps_all_p[1]")
+
+    
+
     
     
-    results.append(df.Histo1D(("weight", "", *bins_weight), "weight"))
+    
+    
+    #results.append(df.Histo1D(("weight", "", *bins_weight), "weight"))
     
     # construct Lorentz vectors of the leptons
     df = df.Define("leps_tlv", "FCCAnalyses::makeLorentzVectors(leps_all)")
-    df = df.Filter("leps_all_no == 2")
-    
-    df = df.Define("m_inv", "(leps_tlv[0]+leps_tlv[1]).M()")
-    df = df.Filter("m_inv >= 50")
-    
-    
-    df = df.Define("missingEnergy_vec", "FCCAnalyses::missingEnergy(91., ReconstructedParticles)")
-    df = df.Define("missingEnergy", "missingEnergy_vec[0].energy")
 
-    df = df.Define("visibleEnergy", "FCCAnalyses::visibleEnergy(ReconstructedParticles)")
-    
-    
     df = df.Define("m_inv", "FCCAnalyses::inv_mass(leps_tlv)")
-    df = df.Filter("leps_all_no>=2")
+    #df = df.Define("muon_acol", "FCCAnalyses::muon_acol(leps_all)")
+    df = df.Define("max_p", "FCCAnalyses::max_p(leps_all_p)")              
+    df = df.Define("missingEnergy", "FCCAnalyses::missingEnergy(91., ReconstructedParticles)")
+    df = df.Define("emiss", "missingEnergy[0].energy")
+    df = df.Define("visibleEnergy", "FCCAnalyses::visibleEnergy(ReconstructedParticles)")
+    df = df.Define("max_pt", "FCCAnalyses::max_pt(leps_tlv)")
+    
+    
+    
+    #FILTERS
+    #df = df.Filter("m_inv >= 50")
+    df = df.Filter("leps_all_no == 2")
+    df = df.Filter("muon_leading >= 27.3 ") #0.6*45.5= 27.3
+    df = df.Filter("max_pt >= 3")
+    #df = df.Filter("leps_all_p[1] == 0 ")
+    df = df.Filter("acolinearity < 1.5707")
+    
+    
+    df = df.Filter("abs(cos(leps_all_theta[0]))<0.98")
+    df = df.Filter("abs(cos(leps_all_theta[1]))<0.98")
     #df = df.Filter("m_inv>=51.652499999999996")
     #df = df.Filter("emiss<=22.25")
     
@@ -108,12 +130,9 @@ def build_graph_ll(df, dataset):
     results.append(df.Histo1D(("m_inv", "", *bins_m_ll), "m_inv"))
     #results.append(df.Histo1D(("missingEnergy", "", *bins_energy), "missingEnergy"))
     results.append(df.Histo1D(("emiss", "", *bins_emiss), "emiss"))
-    results.append(df.Histo1D(("weight", "", *bins_weight2), "weight"))
+    #results.append(df.Histo1D(("weight", "", *bins_weight2), "weight"))
     #total and selected
-
-    
-    results.append(df.Histo1D(("m_inv", "", *bins_m_ll), "m_inv"))
-    results.append(df.Histo1D(("missingEnergy", "", *bins_m_ll), "missingEnergy"))
+    #results.append(df.Histo1D(("missingEnergy", "", *bins_m_ll), "missingEnergy"))
     results.append(df.Histo1D(("visibleEnergy", "", *bins_m_ll), "visibleEnergy"))
     
     df = df.Define("theta_plus", "(leps_all_q[0] > 0) ? leps_all_theta[0] : leps_all_theta[1]")
@@ -126,10 +145,10 @@ def build_graph_ll(df, dataset):
     results.append(df.Histo1D(("theta_minus", "", *bins_theta), "theta_minus"))
     results.append(df.Histo1D(("cos_theta_plus", "", *bins_cos), "cos_theta_plus"))
     results.append(df.Histo1D(("cos_theta_minus", "", *bins_cos), "cos_theta_minus"))
-    
-    
+    results.append(df.Histo1D(("acolinearity", "", *bins_acol), "acolinearity"))
+    results.append(df.Histo1D(("max_p", "", *bins_p_mu), "max_p"))
     results.append(df.Histo1D(("cosThetac", "", *bins_cos), "cosThetac"))
-        
+    
     results.append(df.Histo1D(("evts_final", "", *bins_count), "weight"))
     return results, weightsum
     
@@ -146,6 +165,7 @@ if __name__ == "__main__":
 
     datasets += functions.filter_datasets(datasets_spring2021_ecm91, ["p8_ee_Zmumu_ecm91"])
     datasets += functions.filter_datasets(datasets_spring2021_ecm91, ["p8_ee_Ztautau_ecm91"])
-    result = functions.build_and_run(datasets, build_graph_ll, "tmp/output_xsec_example.root", maxFiles=args.maxFiles)
-    #functions.build_and_run(datasets, build_graph_ll, "tmp/output_xsec_example.root", maxFiles=args.maxFiles, norm=True, lumi=150000000)
+    datasets += functions.filter_datasets(datasets_spring2021_ecm91, ["wzp6_gaga_mumu_5_ecm91p2"])
+    #result = functions.build_and_run(datasets, build_graph_ll, "tmp/output_xsec_example.root", maxFiles=args.maxFiles)
+    functions.build_and_run(datasets, build_graph_ll, "tmp/output_xsec_example.root", maxFiles=args.maxFiles, norm=True, lumi=150000000)
 

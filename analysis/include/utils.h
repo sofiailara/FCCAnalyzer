@@ -42,7 +42,7 @@ float acolinearity(Vec_rp in) {
     TLorentzVector p2;
     p2.SetXYZM(in[1].momentum.x, in[1].momentum.y, in[1].momentum.z, in[1].mass);
 
-    float acol = abs(p1.Theta() - p2.Theta());
+    float acol = abs(3.1415926535-p1.Theta() - p2.Theta());
     return acol;
 }
 

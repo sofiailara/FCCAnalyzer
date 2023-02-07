@@ -10,6 +10,7 @@
 #include "edm4hep/MCParticleData.h"
 #include "edm4hep/ParticleIDData.h"
 
+
 #include "ReconstructedParticle2MC.h"
 
 namespace FCCAnalyses {
@@ -34,7 +35,27 @@ float inv_mass(Vec_tlv in) {
         }
     return tlv.M();
 }    
-               
+
+float max_pt(Vec_tlv leps_tlv) {
+    float max = leps_tlv[0].Pt();
+    for (int i = 0; i < leps_tlv.size(); i++){
+        if (leps_tlv[i].Pt() >= max) {
+        max = leps_tlv[i].Pt();
+        }
+    }
+    return max;
+}
+
+float max_p(Vec_f im) {
+    float p = im[0];
+    for (int i = 1; i < im.size(); i++){
+        if (im[i] >p){
+            p = im[i];
+        }
+    }
+    return p/45.6;
+}
+       
 }
 
 #endif
